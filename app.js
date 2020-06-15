@@ -22,6 +22,10 @@ const app = require('fastify')({
 
 app.register(require('fastify-formbody'));
 
+app.get('/', function (request, reply) {
+    reply.send({ hej: 'då' })
+});
+
 app.post('/', (request, reply) => {
     const options = {
         image: `${imagesFolder}/${chooseRandomImage()}`,
@@ -81,13 +85,13 @@ app.post('/', (request, reply) => {
 
 const PORT = process.env.PORT || 5000
 
-if (!isLambda) {
+// if (!isLambda) {
     // called directly i.e. "node app"
-    app.listen(PORT, (err) => {
+    app.listen(PORT,  '0.0.0.0', (err) => {
       if (err) console.error(err);
       console.log('server listening on 8080');
     });
-  } else {
+//   } else {
     // required as a module => executed on aws lambda
-    module.exports = app;
-}
+    // module.exports = app;
+// }

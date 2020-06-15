@@ -79,11 +79,13 @@ app.post('/', (request, reply) => {
 
 });
 
+const PORT = process.env.PORT || 5000
+
 if (!isLambda) {
     // called directly i.e. "node app"
-    app.listen(3000, (err) => {
+    app.listen(PORT, (err) => {
       if (err) console.error(err);
-      console.log('server listening on 3000');
+      console.log('server listening on 8080');
     });
   } else {
     // required as a module => executed on aws lambda

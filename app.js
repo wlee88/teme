@@ -49,7 +49,7 @@ app.post('/', (request, reply) => {
     const putMemeOnS3 = () => {
         // Upload the thumbnail image to the destination bucket
         sharp(options.outfile)
-            .jpeg({quality: 80})
+            .jpeg({quality: 70})
             .toBuffer((err, buffer) => {
                 if (err) { console.log({err}); throw new Error(err)}
                 const key = generateDstKey();

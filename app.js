@@ -33,7 +33,7 @@ app.post('/', (request, reply) => {
         outfile: `${tempDir()}memefile-${uuid()}.webp`
     };
 
-    const { body: { text } }  = request;    
+    const { body: { text } }  = request;
 
     const texts = text.trim().split(";");
     options.topText = texts[0];
@@ -69,7 +69,8 @@ app.post('/', (request, reply) => {
 
                     s3.putObject(destparams).promise()
                         .then(() => {
-                            fs.unlinkSync(options.outfile)
+                            fs.unlinkSync(options.outfile);
+                            console.log({response})
                             reply.send(response);
                         }); 
                 } catch (error) {

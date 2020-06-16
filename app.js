@@ -10,7 +10,7 @@ const dstBucket = 'wlee-meme';
 const generateDstKey = () => `alex-says-${uuid()}.webp`;
 const memeMaker = require('meme-maker');
 const isLambda = require.main !== module;
-const s3BucketUrl = `https://${dstBucket}.s3.ap-southeast-2.amazonaws.com`;
+const s3BucketUrl = `http://${dstBucket}.s3.ap-southeast-2.amazonaws.com`;
 
 const tempDir = () => isLambda ? '/tmp/' : '';
 
@@ -57,8 +57,7 @@ app.post('/', (request, reply) => {
                                 "type": "plain_text",
                                 "text": "Alex Say"
                             },
-                            // "image_url": `${s3BucketUrl}/${key}`,
-                            "image_url": "http://placehold.it/300x300",
+                            "image_url": `${s3BucketUrl}/${key}`,
                             "alt_text": "Alex Say",
                             "block_id": "alex-pls",
                         }

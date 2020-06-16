@@ -27,6 +27,7 @@ app.get('/', function (request, reply) {
 });
 
 app.post('/', (request, reply) => {
+    console.log({request,reply});
     const options = {
         image: `${imagesFolder}/${chooseRandomImage()}`,
         outfile: `${tempDir()}memefile-${uuid()}.webp`
@@ -46,6 +47,7 @@ app.post('/', (request, reply) => {
         sharp(options.outfile)
             .toFormat('webp')
             .toBuffer((err, buffer) => {
+                if (err) { console.log({err}); throw new Error(err)}
                 const key = generateDstKey();
                 const response = {
                     "blocks": [

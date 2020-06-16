@@ -80,7 +80,7 @@ app.post('/', (request, reply) => {
                         .then(() => {
                             fs.unlinkSync(options.outfile);
                             console.log({response: JSON.stringify(response)})
-                            // reply.send(response);
+                            reply.send();
                             axios.post(response_url, {
                                 "response_type": "in_channel",
                                 "text": title,

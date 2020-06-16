@@ -107,7 +107,7 @@ app.post('/', (request, reply) => {
 
 });
 
-const PORT = 5000
+const PORT = process.env.PORT || 5000
 
 // if (!isLambda) {
     // called directly i.e. "node app"

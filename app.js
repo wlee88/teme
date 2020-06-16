@@ -82,7 +82,13 @@ app.post('/', (request, reply) => {
                             console.log({response: JSON.stringify(response)})
                             reply.send(response);
                             axios.post(response_url, {
-                                "text": "Thanks for your request, we'll process it and get back to you."
+                                "response_type": "in_channel",
+                                "text": "It's 80 degrees right now.",
+                                "attachments": [
+                                    {
+                                        "text":"Partly cloudy today and tomorrow"
+                                    }
+                                ]
                             });
                         }); 
                 } catch (error) {

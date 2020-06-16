@@ -12,6 +12,8 @@ const memeMaker = require('meme-maker');
 const isLambda = require.main !== module;
 const s3BucketUrl = `http://${dstBucket}.s3.ap-southeast-2.amazonaws.com`;
 
+const axios = require('axios');
+
 const tempDir = () => isLambda ? '/tmp/' : '';
 
 const s3 = new AWS.S3();
@@ -33,7 +35,7 @@ app.post('/', (request, reply) => {
         outfile: `${tempDir()}memefile-${uuid()}.webp`
     };
 
-    const { body: { text } }  = request;
+    const { body: { text, response_url } }  = request;
 
     const texts = text.trim().split(";");
     const formattedText = text.trim().replace(";", " ");
@@ -79,6 +81,9 @@ app.post('/', (request, reply) => {
                             fs.unlinkSync(options.outfile);
                             console.log({response: JSON.stringify(response)})
                             reply.send(response);
+                            axios.post(response_url, {
+                                "text": "Thanks for your request, we'll process it and get back to you."
+                            });
                         }); 
                 } catch (error) {
                     console.log(error);

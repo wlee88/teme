@@ -80,15 +80,11 @@ app.post('/', (request, reply) => {
                         .then(() => {
                             fs.unlinkSync(options.outfile);
                             console.log({response: JSON.stringify(response)})
-                            reply.send(response);
+                            // reply.send(response);
                             axios.post(response_url, {
                                 "response_type": "in_channel",
-                                "text": "It's 80 degrees right now.",
-                                "attachments": [
-                                    {
-                                        "text":"Partly cloudy today and tomorrow"
-                                    }
-                                ]
+                                "text": title,
+                                "attachments": [response]
                             });
                         }); 
                 } catch (error) {

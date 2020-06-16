@@ -7,7 +7,7 @@ const imagesFolder = './images/'
 // Get these from terraform
 const dstBucket = 'wlee-meme';
 // random uuid here 
-const generateDstKey = () => `alex-says-${uuid()}.webp`;
+const generateDstKey = () => `alex-says-${uuid()}.jpg`;
 const memeMaker = require('meme-maker');
 const isLambda = require.main !== module;
 const s3BucketUrl = `http://${dstBucket}.s3.ap-southeast-2.amazonaws.com`;
@@ -36,6 +36,8 @@ app.post('/', (request, reply) => {
     const { body: { text } }  = request;
 
     const texts = text.trim().split(";");
+    const formattedText = text.trim().replace(";", " ");
+    const title = `Alex Say: ${formattedText}`;
     options.topText = texts[0];
 
     if (texts.length > 1) {
@@ -45,7 +47,7 @@ app.post('/', (request, reply) => {
     const putMemeOnS3 = () => {
         // Upload the thumbnail image to the destination bucket
         sharp(options.outfile)
-            .toFormat('webp')
+            .jpeg({quality: 80})
             .toBuffer((err, buffer) => {
                 if (err) { console.log({err}); throw new Error(err)}
                 const key = generateDstKey();
@@ -55,10 +57,10 @@ app.post('/', (request, reply) => {
                             "type": "image",
                             "title": {
                                 "type": "plain_text",
-                                "text": "Alex Say"
+                                "text": title
                             },
                             "image_url": `${s3BucketUrl}/${key}`,
-                            "alt_text": "Alex Say",
+                            "alt_text": title,
                             "block_id": "alex-pls",
                         }
                     ]
@@ -69,7 +71,7 @@ app.post('/', (request, reply) => {
                         Bucket: dstBucket,
                         Key: key,
                         Body: buffer,
-                        ContentType: "image/webp"
+                        ContentType: "image/jpeg"
                     };
 
                     s3.putObject(destparams).promise()
@@ -86,12 +88,26 @@ app.post('/', (request, reply) => {
                 
     };
 
-    // Generate le meme 
-    memeMaker(options, putMemeOnS3);
+    if (text === 'help') {
+        const helpResponse = {
+            "response_type": "ephemeral",
+            "text": "How to use /alex-say",
+            "attachments":[
+                {
+                   "text":"To get alex to say things use `/alex-say some Hello;There`. The ';' indicates a newline."
+                }
+            ]
+         }
+        reply(helpResponse)
+    } else {
+        // Generate le meme 
+        memeMaker(options, putMemeOnS3);
+    }
+
 
 });
 
-const PORT = process.env.PORT || 5000
+const PORT = 5000
 
 // if (!isLambda) {
     // called directly i.e. "node app"

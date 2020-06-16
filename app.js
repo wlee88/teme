@@ -53,8 +53,13 @@ app.post('/', (request, reply) => {
                     "blocks": [
                         {
                             "type": "image",
+                            "title": {
+                                "type": "plain_text",
+                                "text": "Alex Say"
+                            },
                             "image_url": `${s3BucketUrl}/${key}`,
-                            "alt_text": "Alex Meme"
+                            "alt_text": "Alex Say",
+                            "block_id": "alex-pls",
                         }
                     ]
                 };
@@ -70,7 +75,7 @@ app.post('/', (request, reply) => {
                     s3.putObject(destparams).promise()
                         .then(() => {
                             fs.unlinkSync(options.outfile);
-                            console.log({response})
+                            console.log({response: JSON.stringify(response)})
                             reply.send(response);
                         }); 
                 } catch (error) {

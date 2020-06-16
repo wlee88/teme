@@ -57,7 +57,8 @@ app.post('/', (request, reply) => {
                                 "type": "plain_text",
                                 "text": "Alex Say"
                             },
-                            "image_url": `${s3BucketUrl}/${key}`,
+                            // "image_url": `${s3BucketUrl}/${key}`,
+                            "image_url": "http://placehold.it/300x300",
                             "alt_text": "Alex Say",
                             "block_id": "alex-pls",
                         }

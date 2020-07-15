@@ -10,6 +10,14 @@
 
 - install `graphicsmagick`
 - run `yarn` or `npm install`
+-  we need to run `npm install --arch=x64 --platform=linux sharp` for distribution
+- test with:
+```
+curl --header "Content-Type: application/x-www-form-urlencoded" \
+--request POST \
+--data 'text=22222dasdgsadgaserpnot have;TP??' \
+http://localhost:3000
+```
 
 ## Things to do but too lazy right now
 

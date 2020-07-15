@@ -2,11 +2,18 @@
    region = "ap-southeast-2"
  }
 
- variable "app_version" {
+variable "app_version" {
+}
+// Where we get the original meme files from
+variable "s3_images_bucket" {
 }
 
- resource "aws_lambda_function" "meme" {
-   function_name = "meme"
+// Original meme prefixes
+variable "s3_images_prefix" {
+}
+
+resource "aws_lambda_function" "meme" {
+  function_name = "meme"
 
    s3_bucket = "terraform-wlee-meme"
    s3_key    = "v${var.app_version}/meme.zip"
@@ -16,6 +23,13 @@
    timeout = 10
 
    role = aws_iam_role.lambda_exec.arn
+
+   environment {
+     variables = {
+       s3_bucket = var.s3_images_bucket
+       s3_prefix = var.s3_images_prefix
+     }
+   }
  }
 
  # IAM role which dictates what other AWS services the Lambda function

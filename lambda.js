@@ -1,6 +1,6 @@
-const awsLambdaFastify = require('aws-lambda-fastify')
+const awsLambdaFastify = require('aws-serverless-express')
 const app = require('./app');
 
-const proxy = awsLambdaFastify(app)
+const server = awsServerlessExpress.createServer(app);
 
-exports.handler = (event, context, callback) => proxy(event, context, callback)
+exports.handler = (event, context) => { awsServerlessExpress.proxy(server, event, context) }

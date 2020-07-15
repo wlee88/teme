@@ -2,44 +2,84 @@ const { uuid } = require('uuidv4');
 const fs = require('fs');
 const AWS = require('aws-sdk');
 const sharp = require('sharp');
-const { chooseRandomImage } = require('./utils');
+const { autocorrect, randomNumber } = require('./utils');
 const imagesFolder = './images/';
 // Get these from terraform
 const dstBucket = 'wlee-meme';
 // random uuid here
-const generateDstKey = () => `alex-says-${uuid()}.jpg`;
+const generateDstKey = () => `${MEME_OUTPUT_PREFIX}/${uuid()}.jpg`;
 const memeMaker = require('meme-maker');
 const isLambda = require.main !== module;
 const s3BucketUrl = `http://${dstBucket}.s3.ap-southeast-2.amazonaws.com`;
 
+const APP_NAME = 'Alex Say';
+const MEME_SOURCE_PREFIX = 'alex-say/';
+const MEME_OUTPUT_PREFIX = 'alex-say-output';
+
 const axios = require('axios');
 
-const tempDir = () => (isLambda ? '/tmp/' : '');
+
+const retrieveTempDir = () => (isLambda ? '/tmp/' : '.');
 
 const s3 = new AWS.S3();
+const express = require('express');
+const app = express();
+const bodyParser = require('body-parser')
 
-const app = require('fastify')({
-	logger: true
-});
+// parse application/x-www-form-urlencoded
+app.use(bodyParser.urlencoded({ extended: false }))
 
-app.register(require('fastify-formbody'));
+// parse application/json
+app.use(bodyParser.json())
 
-app.get('/', function(request, reply) {
-	reply.send({ hej: 'då' });
-});
-
-app.post('/', (request, reply) => {
+app.post('/', async (request, reply) => {
 	console.log({ request, reply });
-	const options = {
-		image: `${imagesFolder}/${chooseRandomImage()}`,
-		outfile: `${tempDir()}memefile-${uuid()}.webp`
+
+	// Grab and download a random meme from s3
+	const objects = await s3.listObjectsV2({
+		Bucket: dstBucket,
+		Prefix: MEME_SOURCE_PREFIX,
+		Delimiter: '/'
+	}).promise();
+
+	console.log({objects})
+
+	const objectsLength = objects.Contents.length;
+	const randomMemeKey = objects.Contents[randomNumber(objectsLength - 1)].Key;
+	const objectParams = {
+		Bucket: dstBucket,
+		Key: randomMemeKey
 	};
+	const tempInputFile = `${retrieveTempDir()}/${uuid()}.webp`;
+	const fileStream = require('fs').createWriteStream(tempInputFile);
+
+	await new Promise((resolve, reject) => {
+		s3
+			.getObject(objectParams)
+			.createReadStream()
+			.on('end', () => {
+				return resolve();
+			})
+			.on('error', (error) => {
+				return reject(error);
+			})
+			.pipe(fileStream);
+	});
+
+	// Temporary input/output file
+	const options = {
+		image: tempInputFile,
+		outfile: `${retrieveTempDir()}memefile-${uuid()}.webp`
+	};
+
+	console.log({request});
 
 	const { body: { text, response_url } } = request;
 
-	const texts = text.trim().split(';');
+	const autocorrectedText = autocorrect(text);
+	const texts = autocorrectedText.trim().split(';');
 	const formattedText = text.trim().replace(';', ' ');
-	const title = `Alex Say: ${formattedText}`;
+	const title = `${APP_NAME}: ${formattedText}`;
 	options.topText = texts[0];
 
 	if (texts.length > 1) {
@@ -64,12 +104,13 @@ app.post('/', (request, reply) => {
 						},
 						image_url: `${s3BucketUrl}/${key}`,
 						alt_text: title,
-						block_id: 'alex-pls'
+						block_id: 'derp'
 					}
 				]
 			};
 
 			try {
+				// Reply with ok - we'll send the meme when we're done.
 				reply.send();
 
 				const destparams = {
@@ -80,6 +121,7 @@ app.post('/', (request, reply) => {
 				};
 
 				s3.putObject(destparams).promise().then(() => {
+					fs.unlinkSync(tempInputFile)
 					fs.unlinkSync(options.outfile);
 					console.log({ response: JSON.stringify(response) });
 					axios.post(response_url, {
@@ -95,32 +137,19 @@ app.post('/', (request, reply) => {
 		});
 	};
 
-	if (text === 'help') {
-		const helpResponse = {
-			response_type: 'ephemeral',
-			text: 'How to use /alex-say',
-			attachments: [
-				{
-					text: "To get alex to say things use `/alex-say some Hello;There`. The ';' indicates a newline."
-				}
-			]
-		};
-		reply(helpResponse);
-	} else {
-		// Generate le meme
-		memeMaker(options, putMemeOnS3);
-	}
+	// Generate le meme
+	memeMaker(options, putMemeOnS3);
+	
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
-// if (!isLambda) {
-// called directly i.e. "node app"
-app.listen(PORT, '0.0.0.0', (err) => {
-	if (err) console.error(err);
-	console.log('server listening on 8080');
-});
-//   } else {
-// required as a module => executed on aws lambda
-// module.exports = app;
-// }
+if (!isLambda) {
+	app.listen(PORT, (err) => {
+		if (err) console.error(err);
+		console.log(`server listening on ${PORT}`);
+	});
+} else {
+	// required as a module => executed on aws lambda
+	module.exports = app;
+}

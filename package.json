@@ -1,11 +1,16 @@
 {
 	"name": "meme",
-	"version": "1.0.20",
+	"version": "1.0.26",
 	"description": "",
 	"main": "app.js",
 	"scripts": {
 		"start": "node app.js",
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"prepare-modules": "rm -rf node_modules && npm install --arch=x64 --platform=linux",
+		"prepare": "zip -r meme.zip *.js node_modules graphicsmagick",
+		"deploy:copy": "aws s3 cp meme.zip s3://terraform-wlee-meme/v1.0.30/meme.zip",
+		"deploy": "npm run prepare && npm run deploy:copy",
+		"deploy:full": "npm run deploy && cd terraform && terraform apply -var='app_version=1.0.30'"
 	},
 	"author": "",
 	"license": "ISC",
@@ -14,6 +19,7 @@
 		"aws-serverless-express": "^3.3.8",
 		"axios": "^0.19.2",
 		"body-parser": "^1.19.0",
+		"change-case": "^4.1.1",
 		"express": "^4.17.1",
 		"meme-maker": "^2.1.2",
 		"sharp": "^0.25.4",

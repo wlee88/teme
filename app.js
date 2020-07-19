@@ -1,4 +1,5 @@
 const { uuid } = require('uuidv4');
+const { capitalCase, paramCase } = require('change-case');
 const fs = require('fs');
 const AWS = require('aws-sdk');
 const sharp = require('sharp');
@@ -7,17 +8,12 @@ const imagesFolder = './images/';
 // Get these from terraform
 const dstBucket = 'wlee-meme';
 // random uuid here
-const generateDstKey = () => `${MEME_OUTPUT_PREFIX}/${uuid()}.jpg`;
+const generateKey = prefix => `${prefix}/${uuid()}.jpg`;
 const memeMaker = require('meme-maker');
 const isLambda = require.main !== module;
 const s3BucketUrl = `http://${dstBucket}.s3.ap-southeast-2.amazonaws.com`;
 
-const APP_NAME = 'Alex Say';
-const MEME_SOURCE_PREFIX = 'alex-say/';
-const MEME_OUTPUT_PREFIX = 'alex-say-output';
-
 const axios = require('axios');
-
 
 const retrieveTempDir = () => (isLambda ? '/tmp/' : '.');
 
@@ -35,14 +31,50 @@ app.use(bodyParser.json())
 app.post('/', async (request, reply) => {
 	console.log({ request, reply });
 
+	// retrieve info from request
+	const { body: { text, response_url, command } } = request;
+
+	const autocorrectedText = autocorrect(text);
+	const texts = autocorrectedText.trim().split(';');
+	const formattedText = text.trim().replace(';', ' ');
+
+	const COMMAND = command.replace("/","")
+	const APP_NAME = capitalCase(COMMAND)
+	const MEME_SOURCE_PREFIX = paramCase(COMMAND);
+	const MEME_OUTPUT_PREFIX = `${MEME_SOURCE_PREFIX}-output`;
+
+	console.log({
+		COMMAND,
+		APP_NAME,
+		MEME_SOURCE_PREFIX,
+		MEME_OUTPUT_PREFIX
+	});
+
+	const title = `${APP_NAME}: ${formattedText}`;
+	
+	const tempInputFile = `${retrieveTempDir()}/${uuid()}.webp`;
+	const fileStream = require('fs').createWriteStream(tempInputFile);
+
+	// Temporary input/output file
+	const options = {
+		image: tempInputFile,
+		outfile: `${retrieveTempDir()}memefile-${uuid()}.webp`
+	};
+
+	console.log({request});
+
+	options.topText = texts[0];
+
+	if (texts.length > 1) {
+		options.bottomText = texts[1];
+	}
+
 	// Grab and download a random meme from s3
 	const objects = await s3.listObjectsV2({
 		Bucket: dstBucket,
-		Prefix: MEME_SOURCE_PREFIX,
+		Prefix: `${MEME_SOURCE_PREFIX}/`,
 		Delimiter: '/'
 	}).promise();
-
-	console.log({objects})
 
 	const objectsLength = objects.Contents.length;
 	const randomMemeKey = objects.Contents[randomNumber(objectsLength - 1)].Key;
@@ -50,8 +82,6 @@ app.post('/', async (request, reply) => {
 		Bucket: dstBucket,
 		Key: randomMemeKey
 	};
-	const tempInputFile = `${retrieveTempDir()}/${uuid()}.webp`;
-	const fileStream = require('fs').createWriteStream(tempInputFile);
 
 	await new Promise((resolve, reject) => {
 		s3
@@ -66,25 +96,6 @@ app.post('/', async (request, reply) => {
 			.pipe(fileStream);
 	});
 
-	// Temporary input/output file
-	const options = {
-		image: tempInputFile,
-		outfile: `${retrieveTempDir()}memefile-${uuid()}.webp`
-	};
-
-	console.log({request});
-
-	const { body: { text, response_url } } = request;
-
-	const autocorrectedText = autocorrect(text);
-	const texts = autocorrectedText.trim().split(';');
-	const formattedText = text.trim().replace(';', ' ');
-	const title = `${APP_NAME}: ${formattedText}`;
-	options.topText = texts[0];
-
-	if (texts.length > 1) {
-		options.bottomText = texts[1];
-	}
 
 	const putMemeOnS3 = () => {
 		// Upload the thumbnail image to the destination bucket
@@ -93,7 +104,7 @@ app.post('/', async (request, reply) => {
 				console.log({ err });
 				throw new Error(err);
 			}
-			const key = generateDstKey();
+			const key = generateKey(MEME_OUTPUT_PREFIX);
 			const response = {
 				blocks: [
 					{
@@ -121,8 +132,8 @@ app.post('/', async (request, reply) => {
 				};
 
 				s3.putObject(destparams).promise().then(() => {
-					fs.unlinkSync(tempInputFile)
-					fs.unlinkSync(options.outfile);
+					// fs.unlinkSync(tempInputFile)
+					// fs.unlinkSync(options.outfile);
 					console.log({ response: JSON.stringify(response) });
 					axios.post(response_url, {
 						response_type: 'in_channel',

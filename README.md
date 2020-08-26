@@ -3,9 +3,9 @@
 
 ## Intro
 - I just wanted to fool around and see if i could get slack slash commands working
-
 - requires `graphicsmagick`
-
+- currently only works with heroku - aws lambda with api gateway is weird.
+  
 ## Getting started
 
 - install `graphicsmagick`
@@ -20,11 +20,3 @@ http://localhost:3000
 ```
 - zip distribution as a `.zip` and use `aws s3 cp meme.zip s3://terraform-wlee-meme/v1.0.20/meme.zip`
 - use `terraform apply -var="app_version=1.0.20"`
-
-## Things to do but too lazy right now
-
-- add a linter dammit
-- Typescript this up - it would be great to type the command that slacks sends and re-use this for future slack stuff.
-- Add auth to only allow specific Slack spaces
-- flesh out deploy-zip.sh
-- terraform out the bucket names

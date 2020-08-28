@@ -84,7 +84,7 @@ app.post('/', async (request, reply) => {
 		Key: randomMemeKey
 	};
 
-	console.log({ bucket: dstBucket, key: randomMemeKey });
+	console.log({ objectsLength, bucket: dstBucket, key: randomMemeKey });
 
 	await new Promise((resolve, reject) => {
 		s3

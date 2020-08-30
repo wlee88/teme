@@ -37,6 +37,6 @@ http://localhost:3000
 ```
 - (if using within lambda  - need to run `npm install --arch=x64 --platform=linux` sharp` for distribution)
 
-notes that aren't useful anymore but useful if we decide to use lambda again
+### Notes that aren't useful anymore but useful if we decide to use lambda again
 - zip distribution as a `.zip` and use `aws s3 cp meme.zip s3://terraform-wlee-meme/v1.0.20/meme.zip`
 - use `terraform apply -var="app_version=1.0.20"`

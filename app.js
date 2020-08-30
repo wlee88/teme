@@ -77,8 +77,14 @@ app.post('/', async (request, reply) => {
 		})
 		.promise();
 
+	console.log(objects.Contents);
 	const objectsLength = objects.Contents.length;
-	const randomMemeKey = objects.Contents[randomNumber(objectsLength - 1)].Key;
+	const randomIndex = randomNumber(objectsLength - 1);
+	// We don't want the 0th as it's the folder itself.
+	const index = randomIndex === 0 ? randomIndex + 1 : randomIndex;
+	console.log({ randomIndex, index, objectsLength });
+	const randomMemeKey = objects.Contents[index].Key;
+
 	const objectParams = {
 		Bucket: dstBucket,
 		Key: randomMemeKey

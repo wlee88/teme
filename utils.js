@@ -15,4 +15,4 @@ exports.hashCode = (s) =>
 		return a & a;
 	}, 0);
 
-exports.autocorrect = (text) => text.replace("romania", "Romania")
+exports.autocorrect = (text) => text.replace('romania', 'Romania');

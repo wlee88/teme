@@ -27,6 +27,10 @@ app.use(bodyParser.urlencoded({ extended: false }));
 // parse application/json
 app.use(bodyParser.json());
 
+app.get('/', (_, reply) => {
+	reply.sendStatus(200);
+});
+
 app.post('/', async (request, reply) => {
 	console.log({ request, reply });
 

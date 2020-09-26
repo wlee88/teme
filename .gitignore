@@ -1,10 +1,11 @@
 .DS_STORE
 .terraform
+.env
+.idea/
+
+*.webp
+*.jpg
+*.zip
 
 node_modules
 package-lock.json
-
-# Generated files
-memefile.png
-output.webp
-meme.zip

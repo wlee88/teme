@@ -1,25 +1,19 @@
-const { uuid } = require('uuidv4');
-const { capitalCase, paramCase } = require('change-case');
+require('dotenv').config()
+
 const fs = require('fs');
-const AWS = require('aws-sdk');
-const sharp = require('sharp');
-const { autocorrect, randomNumber } = require('./utils');
-// Get these from terraform
-const dstBucket = 'wlee-meme';
-// random uuid here
-const generateKey = (prefix) => `${prefix}/${uuid()}.jpg`;
-const memeMaker = require('meme-maker');
-const isLambda = require.main !== module;
-const s3BucketUrl = `http://${dstBucket}.s3.ap-southeast-2.amazonaws.com`;
+const util = require('util')
 
-const axios = require('axios');
-
-const retrieveTempDir = () => (isLambda ? '/tmp/' : '.');
-
-const s3 = new AWS.S3();
-const express = require('express');
-const app = express();
 const bodyParser = require('body-parser');
+const axios = require('axios');
+const express = require('express');
+const sharp = require('sharp');
+const memeMaker = require('meme-maker');
+const { extractParams } = require("./utils");
+const memeMakerPromise = util.promisify(memeMaker);
+
+const { memeClient } = require('./Dropbox');
+
+const app = express();
 
 // parse application/x-www-form-urlencoded
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -28,150 +22,58 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 app.get('/', (_, reply) => {
-	reply.sendStatus(200);
+  reply.sendStatus(200);
 });
 
 app.post('/', async (request, reply) => {
-	console.log({ request, reply });
+  const { response_url, GENERATED_MEMES_FOLDER, SOURCE_FOLDER, title, options } = extractParams(request);
 
-	// retrieve info from request
-	const { body: { text, response_url, command } } = request;
+   (await memeClient.getAndDownloadRandomFile(SOURCE_FOLDER, options.image ))
+   await memeMakerPromise(options);
+  // Reply with ok - we'll send the meme when we're done.
+  reply.send();
 
-	const autocorrectedText = autocorrect(text);
-	const texts = autocorrectedText.trim().split(';');
-	const formattedText = text.trim().replace(';', ' ');
-
-	const COMMAND = command.replace('/', '');
-	const APP_NAME = capitalCase(COMMAND);
-	const MEME_SOURCE_PREFIX = paramCase(COMMAND);
-	const MEME_OUTPUT_PREFIX = `${MEME_SOURCE_PREFIX}-output`;
-
-	console.log({
-		COMMAND,
-		APP_NAME,
-		MEME_SOURCE_PREFIX,
-		MEME_OUTPUT_PREFIX
-	});
-
-	const title = `${APP_NAME}: ${formattedText}`;
-
-	const tempInputFile = `${retrieveTempDir()}/${uuid()}.webp`;
-	const fileStream = require('fs').createWriteStream(tempInputFile);
-
-	// Temporary input/output file
-	const options = {
-		image: tempInputFile,
-		outfile: `${retrieveTempDir()}memefile-${uuid()}.webp`
-	};
-
-	console.log({ request });
-
-	options.topText = texts[0];
-
-	if (texts.length > 1) {
-		options.bottomText = texts[1];
-	}
-
-	// Grab and download a random meme from s3
-	const objects = await s3
-		.listObjectsV2({
-			Bucket: dstBucket,
-			Prefix: `${MEME_SOURCE_PREFIX}/`,
-			Delimiter: '/'
-		})
-		.promise();
-
-	console.log(objects.Contents);
-	const objectsLength = objects.Contents.length;
-	const randomIndex = randomNumber(objectsLength - 1);
-	// We don't want the 0th as it's the folder itself.
-	const index = randomIndex === 0 ? randomIndex + 1 : randomIndex;
-	console.log({ randomIndex, index, objectsLength });
-	const randomMemeKey = objects.Contents[index].Key;
-
-	const objectParams = {
-		Bucket: dstBucket,
-		Key: randomMemeKey
-	};
-
-	console.log({ objectsLength, bucket: dstBucket, key: randomMemeKey });
-
-	await new Promise((resolve, reject) => {
-		s3
-			.getObject(objectParams)
-			.createReadStream()
-			.on('end', () => {
-				return resolve();
-			})
-			.on('error', (error) => {
-				return reject(error);
-			})
-			.pipe(fileStream);
-	});
-
-	const putMemeOnS3 = () => {
-		// Upload the thumbnail image to the destination bucket
-		sharp(options.outfile).jpeg({ quality: 70 }).toBuffer((err, buffer) => {
-			if (err) {
-				console.log({ err });
-				throw new Error(err);
-			}
-			const key = generateKey(MEME_OUTPUT_PREFIX);
-			const response = {
-				blocks: [
-					{
-						type: 'image',
-						title: {
-							type: 'plain_text',
-							text: title
-						},
-						image_url: `${s3BucketUrl}/${key}`,
-						alt_text: title,
-						block_id: 'derp'
-					}
-				]
-			};
-
-			try {
-				// Reply with ok - we'll send the meme when we're done.
-				reply.send();
-
-				const destparams = {
-					Bucket: dstBucket,
-					Key: key,
-					Body: buffer,
-					ContentType: 'image/jpeg'
-				};
-
-				s3.putObject(destparams).promise().then(() => {
-					// fs.unlinkSync(tempInputFile)
-					// fs.unlinkSync(options.outfile);
-					console.log({ response: JSON.stringify(response) });
-					axios.post(response_url, {
-						response_type: 'in_channel',
-						text: title,
-						attachments: [ response ]
-					});
-				});
-			} catch (error) {
-				console.log(error);
-				return;
-			}
-		});
-	};
-
-	// Generate le meme
-	memeMaker(options, putMemeOnS3);
+  const compressedImageStream = sharp(options.outfile).jpeg({quality: 70});
+  const clientFolderUploadPath = `${GENERATED_MEMES_FOLDER}/`
+  const memeUrl = await memeClient.uploadAndGenerateUrl(compressedImageStream, clientFolderUploadPath, options.outfile)
+  await sendToSlack(options, { memeUrl, title, response_url })
 });
 
 const PORT = process.env.PORT || 3000;
 
-if (!isLambda) {
-	app.listen(PORT, (err) => {
-		if (err) console.error(err);
-		console.log(`server listening on ${PORT}`);
-	});
-} else {
-	// required as a module => executed on aws lambda
-	module.exports = app;
-}
+app.listen(PORT, (err) => {
+  if (err) console.error(err);
+  console.log(`server listening on ${PORT}`);
+});
+
+async function sendToSlack(options, params) {
+  const { memeUrl, title, response_url } = params;
+  try {
+    const response = {
+      blocks: [
+        {
+          type: 'image',
+          title: {
+            type: 'plain_text',
+            text: title
+          },
+          image_url: memeUrl,
+          alt_text: title,
+          block_id: 'derp'
+        }
+      ]
+    };
+    console.log({response: JSON.stringify(response)});
+    fs.unlinkSync(options.image);
+    fs.unlinkSync(options.outfile);
+
+    await axios.post(response_url, {
+      response_type: 'in_channel',
+      text: title,
+      attachments: [response]
+    });
+  } catch (error) {
+    console.log({error})
+  }
+};
+

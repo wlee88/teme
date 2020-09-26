@@ -4,17 +4,24 @@
 ## Intro
 - I just wanted to fool around and see if i could get slack slash commands working
 - requires `graphicsmagick`
-- currently only works with heroku - aws lambda with api gateway is weird.
+- uses dropbox for a free awesomely usable solution.
   
 ## How to use
-
-- set this up via heroku
-- set up a bucket in s3 called `wlee-meme` (sorry - made this in a rush - so no magic terraform)
-- make a folder named after what you'll call your custom command (highly recommended you use the format `name-of-person-say` format) and also create a folder with the same name but with `-output` so a `wlee-say` would also have a `wlee-say-output`
-- put memeable pictures in that folder (leave output folder alone).
+- Provide in github secrets HEROKU_API_KEY, HEROKU_APP_NAME, HEROKU_APP_URL, HEROKU_EMAIL
+- ALso set up your dropbox app with full access and token key - provide this key in github actions secrets as DROPBOX_API_TOKEN. This will be passed in as an ENV variable.
+- it will use `meme-say/bots` and `meme-say/generated-memes` 
+- make a folder named after what you'll call your custom command (for example `alex-say`) in the `bots` folder and place your memeable pictures in that folder - ensure these images aren't too big. about 1000px is goopd
 - add the endpoint as a custom slash command in your slack group - you can reuse this endpoint for as many custom slash commands as you want - for example you could create an `ana-say` integration, and `elton-say` and despite being seperate integrations - you can use the same url.
-- Finally once set up you can use `whatever-command-you-confgured` with some words seperated by `;` for a new line.
+- It's nice to give the hint [first-line];[second-line]
 
+## Example bot creation
+
+Scenario: create a bot called lachlan
+- log into the same dropbox account the dropbox app you created has.
+- go into `meme-say/bots` and create a folder called lachlan and put images in there
+- in slack create a custom slash command called lachlan-say(naming here is important as it must match the folder name you created) 
+- use the endpoint you created when you deployed this to heroku
+- success
 ## How it works
 
 Given a slack command (for example `alex-say`) - it will use this as the prefix for the configured bucket.

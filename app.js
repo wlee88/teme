@@ -8,7 +8,7 @@ const axios = require('axios');
 const express = require('express');
 const sharp = require('sharp');
 const memeMaker = require('meme-maker');
-const { extractParams } = require("./utils");
+const { extractParams, extractParamsForMemeSay } = require("./utils");
 const memeMakerPromise = util.promisify(memeMaker);
 
 const { memeClient } = require('./Dropbox');
@@ -26,17 +26,47 @@ app.get('/', (_, reply) => {
 });
 
 app.post('/', async (request, reply) => {
-  const { response_url, GENERATED_MEMES_FOLDER, SOURCE_FOLDER, title, options } = extractParams(request);
 
-   (await memeClient.getAndDownloadRandomFile(SOURCE_FOLDER, options.image ))
-   await memeMakerPromise(options);
-  // Reply with ok - we'll send the meme when we're done.
-  reply.send();
+  const { body: { command }} = request;
+  console.log({command})
+  if (command.includes('meme-say')) {
+    console.log('command is meme-say');
+    const { response_url, GENERATED_MEMES_FOLDER, SOURCE_FOLDER, title, options } = extractParamsForMemeSay(request);
 
-  const compressedImageStream = sharp(options.outfile).jpeg({quality: 70});
-  const clientFolderUploadPath = `${GENERATED_MEMES_FOLDER}/`
-  const memeUrl = await memeClient.uploadAndGenerateUrl(compressedImageStream, clientFolderUploadPath, options.outfile)
-  await sendToSlack(options, { memeUrl, title, response_url })
+    (await memeClient.getAndDownloadRandomFile(SOURCE_FOLDER, options.image ))
+    await memeMakerPromise(options);
+    // Reply with ok - we'll send the meme when we're done.
+    reply.send();
+
+    const compressedImageStream = sharp(options.outfile)
+        .resize({
+          fit: sharp.fit.contain,
+          width: 800
+        })
+        .jpeg({ quality: 80 });
+    const clientFolderUploadPath = `${GENERATED_MEMES_FOLDER}/`
+    const memeUrl = await memeClient.uploadAndGenerateUrl(compressedImageStream, clientFolderUploadPath, options.outfile)
+    await sendToSlack(options, { memeUrl, title, response_url })
+  } else {
+    const { GENERATED_MEMES_FOLDER, SOURCE_FOLDER, options, response_url,title } = extractParams(request);
+
+    (await memeClient.getAndDownloadRandomFile(SOURCE_FOLDER, options.image ))
+    await memeMakerPromise(options);
+    // Reply with ok - we'll send the meme when we're done.
+    reply.send();
+
+    const compressedImageStream = sharp(options.outfile)
+        .resize({
+          fit: sharp.fit.contain,
+          width: 800
+        })
+        .jpeg({ quality: 80 });
+    const clientFolderUploadPath = `${GENERATED_MEMES_FOLDER}/`
+    const memeUrl = await memeClient.uploadAndGenerateUrl(compressedImageStream, clientFolderUploadPath, options.outfile)
+    await sendToSlack(options, { memeUrl, title, response_url })
+  }
+
+
 });
 
 const PORT = process.env.PORT || 3000;

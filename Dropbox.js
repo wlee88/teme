@@ -3,7 +3,6 @@ const { uuid } = require('uuidv4');
 const fs = require('fs');
 
 const dropboxV2Api = require('dropbox-v2-api');
-const sharp = require("sharp");
 const { DROPBOX_API_KEY } = process.env
 
 const client = (() => {
@@ -12,6 +11,7 @@ const client = (() => {
     });
 
     const getRandomFile = (folderPath) => new Promise((resolve, reject) => {
+        console.log({folderPath});
         dropbox({
             resource: 'files/list_folder',
             parameters: {
@@ -28,6 +28,7 @@ const client = (() => {
     })
 
     const downloadFile = (path, destination) => new Promise((resolve, reject) => {
+        console.log('download file', {path, destination});
         dropbox({
             resource: 'files/download',
             parameters: {
@@ -43,6 +44,7 @@ const client = (() => {
     });
 
     const upload = (fileStream, path) => new Promise((resolve, reject) => {
+        console.log('upload', {path});
         dropbox({
             resource: 'files/upload',
             parameters: { path },
@@ -53,6 +55,7 @@ const client = (() => {
     });
 
     const getShareableUrl = (path) => new Promise((resolve, reject) => {
+        console.log('getShareableUrl', {path});
         dropbox({
             resource: 'sharing/create_shared_link_with_settings',
             parameters: { path }
@@ -67,8 +70,10 @@ const client = (() => {
 
     return {
         getAndDownloadRandomFile: async (folderPath, destination) => {
+            console.log('getAndDownloadRandomFile', {folderPath});
             try {
                 const path = await getRandomFile(folderPath)
+                console.log('randomFile', {path})
                 await downloadFile(path, destination)
             }
             catch(error) {
@@ -76,6 +81,7 @@ const client = (() => {
             }
         },
         uploadAndGenerateUrl: async (stream, clientFolderPath ) => {
+            console.log('uploadAndGenerateUrl', {clientFolderPath});
             try {
                 const randomFileName = `${uuid()}.jpg`;
                 const dropboxFilePath = `${clientFolderPath}${randomFileName}`

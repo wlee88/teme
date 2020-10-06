@@ -27,6 +27,8 @@ const client = (() => {
         })
     })
 
+
+
     const downloadFile = (path, destination) => new Promise((resolve, reject) => {
         console.log('download file', {path, destination});
         dropbox({
@@ -68,7 +70,61 @@ const client = (() => {
         })
     })
 
+    const deleteFile = id => new Promise((resolve, reject) => {
+        console.log('deleteFile', {id});
+        dropbox({
+            resource: 'file_requests/delete',
+            parameters: { ids: [id] }
+        }, (err, result, _) => {
+            if (err) reject(err);
+            resolve()
+        })
+    })
+
+    const getFolderContents = path => new Promise((resolve, reject) => {
+        console.log('path', {path});
+        dropbox({
+            resource: 'files/list_folder',
+            parameters: {
+                path,
+                "recursive": false,
+                "include_media_info": false,
+                "include_deleted": false}
+        }, (err, result, _) => {
+            console.log('list_folder', {result});
+            if (err) reject(err);
+            const { entries } = result
+            const folders = entries.map(entry => entry.name)
+            resolve(folders)
+        })
+    })
+
+    const getIdFromSharedUrl = url => new Promise((resolve, reject) => {
+        const downloadableUrl = url.replace( 'dl.dropboxusercontent.com','www.dropbox.com',);
+
+        dropbox({
+            resource: 'sharing/get_shared_link_metadata',
+            parameters: { url: downloadableUrl }
+        }, (err, result, _) => {
+            if (err) reject(err);
+            console.log({result})
+            const { id } = result
+            const response = id.replace('id:', '')
+            resolve(response)
+        })
+    })
+
     return {
+        getFolderContents: async path => getFolderContents(path),
+        deleteFileBySharedLink: async url => {
+          console.log('deleteFile', {url})
+            try {
+                const dropboxPath = await getIdFromSharedUrl(url);
+                await deleteFile(dropboxPath);
+            } catch (error) {
+              console.log({error})
+            }
+        },
         getAndDownloadRandomFile: async (folderPath, destination) => {
             console.log('getAndDownloadRandomFile', {folderPath});
             try {

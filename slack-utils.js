@@ -93,3 +93,29 @@ exports.response = (title, image_url) =>
             }
         ]
     });
+
+exports.helpText = () => ({
+    "blocks": [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "Use the command in the following format `/meme-say [name-of-person] [first-sentence;second-sentence]`"
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "Example usage: `/meme-say alex LGTM; approved`"
+            }
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "List available meme-able people using : `/meme-say list`"
+            }
+        }
+    ]
+});

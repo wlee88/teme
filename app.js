@@ -10,10 +10,8 @@ const axios = require('axios');
 const express = require('express');
 const sharp = require('sharp');
 const memeMaker = require('meme-maker');
-const { listPeople } = require("./slack-utils");
-const { autocorrect } = require("./utils");
-const { response, question } = require("./slack-utils");
-const { extractParams, extractParamsForMemeSay } = require("./utils");
+const { helpText, listPeople, response, question} = require("./slack-utils");
+const { autocorrect, extractParams, extractParamsForMemeSay } = require("./utils");
 const memeMakerPromise = util.promisify(memeMaker);
 
 const { memeClient } = require('./Dropbox');
@@ -44,9 +42,16 @@ app.post('/', async (request, reply) => {
       reply.send()
       const folder = SOURCE_FOLDER.replace('/list','');
       const folders = await memeClient.getFolderContents(folder);
-      await sendResponseToSlackWithAttachments({title, response_url}, [listPeople(folders)])
+      await sendResponseToSlackWithAttachments({ response_url }, [listPeople(folders)])
       return
     }
+
+    if (text && text.startsWith('help')) {
+      reply.send()
+      await sendResponseToSlackWithAttachments({ response_url}, [helpText()])
+      return
+    }
+
     const options = prepareOptions(text);
     const payload = request.body.payload ? JSON.parse(request.body.payload) : undefined
     if (payload && payload.actions && payload.actions.length > 0) {
@@ -66,7 +71,7 @@ app.post('/', async (request, reply) => {
         const memeUrl = await generateMemeUrl(SOURCE_FOLDER, options, GENERATED_MEMES_FOLDER);
         reply.send()
         console.log({memeUrl, options, text, title, imageUrl})
-        // cleanup(options)
+        cleanup(options)
         await sendQuestionToSlack( { memeUrl, title, response_url, SOURCE_FOLDER, GENERATED_MEMES_FOLDER, text })
       } else {
         // send was sent - so use the specified url
@@ -78,7 +83,7 @@ app.post('/', async (request, reply) => {
     } else {
       reply.send(); // Reply with ok - we'll send the meme when we're done.
       const memeUrl = await generateMemeUrl(SOURCE_FOLDER, options, GENERATED_MEMES_FOLDER);
-      // cleanup(options)
+      cleanup(options)
       await sendQuestionToSlack({ memeUrl, title, response_url, SOURCE_FOLDER, GENERATED_MEMES_FOLDER, text })
     }
   } else {
@@ -112,12 +117,17 @@ async function sendResponseToSlack(params) {
 
 async function sendResponseToSlackWithAttachments(params, attachments) {
   const { title, response_url } = params;
+  const data = {
+    response_type: 'ephemeral',
+    attachments
+  };
+
+  const body = {
+    ...data,
+    ...(title) && { text: title}
+  }
   try {
-    await axios.post(response_url, {
-      response_type: 'ephemeral',
-      text: title,
-      attachments
-    });
+    await axios.post(response_url, body);
   } catch (error) {
     console.log({error})
   }

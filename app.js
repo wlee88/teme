@@ -70,6 +70,7 @@ app.post('/', async (request, reply) => {
         await sendQuestionToSlack( { memeUrl, title, response_url, SOURCE_FOLDER, GENERATED_MEMES_FOLDER, text })
       } else {
         // send was sent - so use the specified url
+        console.log('ok clicked')
         const [_, __, ___, title, memeUrl] = actions[0].value.split('|')
         await sendResponseToSlack({ memeUrl, title, response_url })
         reply.send(); // Reply with ok - we'll send the meme when we're done.
@@ -101,6 +102,7 @@ async function sendResponseToSlack(params) {
     await axios.post(response_url, {
       response_type: 'in_channel',
       text: title,
+      delete_original: true,
       attachments: [res]
     });
   } catch (error) {

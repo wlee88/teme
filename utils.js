@@ -44,5 +44,6 @@ exports.extractParams = (request) => {
 
     return { response_url, COMMAND, GENERATED_MEMES_FOLDER, SOURCE_FOLDER, title, options };
 }
+// random number from 0 - max exclusive - i.e won't return the max as a random number
 exports.randomNumber = (limit) => Math.floor(Math.random() * Math.floor(limit));
 

@@ -22,7 +22,7 @@ const client = (() => {
                 reject(err)
             }
             const { entries } = result
-            const path = entries[randomNumber(entries.length - 1)].path_lower
+            const path = entries[randomNumber(entries.length)].path_lower
             resolve(path)
         })
     })

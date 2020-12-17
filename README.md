@@ -7,7 +7,7 @@
 - uses dropbox for a free awesomely usable solution.
   
 ## How to use
-- Provide in github secrets HEROKU_API_KEY, HEROKU_APP_NAME, HEROKU_APP_URL, HEROKU_EMAIL
+- Provide in github secrets HEROKU_API_KEY, HEROKU_APP_NAME, HEROKU_APP_URL, HEROKU_EMAIL, ACKLO_ACCESS_TOKEN
 - ALso set up your dropbox app with full access and token key - provide this key in github actions secrets as DROPBOX_API_TOKEN. This will be passed in as an ENV variable.
 - it will use `meme-say/bots` and `meme-say/generated-memes` 
 - make a folder named after what you'll call your custom command (for example `alex-say`) in the `bots` folder and place your memeable pictures in that folder - ensure these images aren't too big. about 1000px is goopd

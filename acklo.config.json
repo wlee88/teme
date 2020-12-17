@@ -1,0 +1,48 @@
+{
+  "version": "v1",
+  "configuration": [
+    {
+      "id": "image",
+      "name": "Image config",
+      "description": "Config for generating the meme image",
+      "params": [
+        {
+          "id": "width",
+          "name": "Width (in pixels)",
+          "kind": "number",
+          "default": 800
+        },
+        {
+          "id": "quality",
+          "name": "Quality (0-100)",
+          "kind": "number",
+          "default": 80
+        },
+        {
+          "id": "font_size",
+          "name": "Font size",
+          "kind": "number",
+          "default": 50
+        },
+        {
+          "id": "font_fill",
+          "name": "Font fill color (hex code)",
+          "kind": "string",
+          "default": "#FFF"
+        },
+        {
+          "id": "stroke_color",
+          "name": "Stroke color (hex code)",
+          "kind": "number",
+          "default": "#000"
+        },
+        {
+          "id": "stroke_weight",
+          "name": "Stroke weight (px)",
+          "kind": "number",
+          "default": 2
+        }
+      ]
+    }
+  ]
+}

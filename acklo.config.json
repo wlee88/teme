@@ -33,7 +33,7 @@
         {
           "id": "stroke_color",
           "name": "Stroke color (hex code)",
-          "kind": "number",
+          "kind": "string",
           "default": "#000"
         },
         {

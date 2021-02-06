@@ -10,6 +10,7 @@ const client = (() => {
         token: DROPBOX_API_KEY
     });
 
+    console.log({DROPBOX_API_KEY})
     const getRandomFile = (folderPath) => new Promise((resolve, reject) => {
         console.log({folderPath});
         dropbox({

@@ -20,7 +20,11 @@ const { memeClient } = require('../Dropbox');
 // });
 // acklo.connect().catch(console.error);
 
+<<<<<<< HEAD
 exports.handler = async (request, _, __) => {
+=======
+exports.handler = async (request, _, callback) => {
+>>>>>>> a007405b61290b523def9882012d344e4ffbe488
   console.log({request})
   console.log(request.body)
   const { body: { command }} = request;
@@ -30,6 +34,7 @@ exports.handler = async (request, _, __) => {
     const { response_url, GENERATED_MEMES_FOLDER, SOURCE_FOLDER, title, text } = extractParamsForMemeSay(request);
 
     if (text && text.startsWith('list')) {
+<<<<<<< HEAD
 
       const folder = SOURCE_FOLDER.replace('/list','');
       const folders = await memeClient.getFolderContents(folder);
@@ -45,6 +50,23 @@ exports.handler = async (request, _, __) => {
       return ({ 
         statusCode: 200 
       })
+=======
+      callback(null, { 
+        statusCode: 200 
+      })
+      const folder = SOURCE_FOLDER.replace('/list','');
+      const folders = await memeClient.getFolderContents(folder);
+      await sendResponseToSlackWithAttachments({ response_url }, [listPeople(folders)])
+      return
+    }
+
+    if (text && text.startsWith('help')) {
+      callback(null, { 
+        statusCode: 200 
+      })
+      await sendResponseToSlackWithAttachments({ response_url}, [helpText()])
+      return
+>>>>>>> a007405b61290b523def9882012d344e4ffbe488
     }
 
     const options = prepareOptions(text);
@@ -73,19 +95,33 @@ exports.handler = async (request, _, __) => {
         console.log('ok clicked')
         const [_, __, ___, title, memeUrl] = actions[0].value.split('|')
         await sendResponseToSlack({ memeUrl, title, response_url })
+<<<<<<< HEAD
         return ({ 
           statusCode: 200 
         })
       }
     } else {
 
+=======
+        callback(null, { 
+            statusCode: 200 
+        }) // Reply with ok - we'll send the meme when we're done.
+      }
+    } else {
+      callback(null, { 
+        statusCode: 200 
+      })
+>>>>>>> a007405b61290b523def9882012d344e4ffbe488
       // Reply with ok - we'll send the meme when we're done.
       const memeUrl = await generateMemeUrl(SOURCE_FOLDER, options, GENERATED_MEMES_FOLDER);
       cleanup(options)
       await sendQuestionToSlack({ memeUrl, title, response_url, SOURCE_FOLDER, GENERATED_MEMES_FOLDER, text })
+<<<<<<< HEAD
       return ({ 
         statusCode: 200 
       })
+=======
+>>>>>>> a007405b61290b523def9882012d344e4ffbe488
     }
   } else {
     await handleSay(request, reply);

@@ -16,7 +16,6 @@
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
-		"@acklo/node-sdk": "https://stack-dev-us-east-public.s3.us-east-2.amazonaws.com/acklo-node-sdk-0.0.13-npm.tgz",
 		"aws-sdk": "^2.696.0",
 		"aws-serverless-express": "^3.3.8",
 		"axios": "^0.19.2",

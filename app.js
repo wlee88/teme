@@ -16,12 +16,6 @@ const memeMakerPromise = util.promisify(memeMaker);
 
 const { memeClient } = require('./Dropbox');
 
-const acklo = require('@acklo/node-sdk').default({
-  applicationName: 'meme-say',
-  environmentName: (process.env.NODE_ENV || 'production').toLowerCase()
-});
-acklo.connect().catch(console.error);
-
 const app = express();
 
 // parse application/x-www-form-urlencoded
@@ -178,9 +172,9 @@ async function generateMemeUrl(SOURCE_FOLDER, options, GENERATED_MEMES_FOLDER) {
   const compressedImageStream = sharp(options.outfile)
       .resize({
         fit: sharp.fit.contain,
-        width: acklo.getConfigProperty('image.width', 800)
+        width: 800
       })
-      .jpeg({quality: acklo.getConfigProperty('image.quality', 80)});
+      .jpeg({quality: 80});
   const clientFolderUploadPath = `${GENERATED_MEMES_FOLDER}/`
   return await memeClient.uploadAndGenerateUrl(compressedImageStream, clientFolderUploadPath, options.outfile)
 }
@@ -196,9 +190,9 @@ async function handleSay(request, reply) {
   const compressedImageStream = sharp(options.outfile)
       .resize({
         fit: sharp.fit.contain,
-        width: acklo.getConfigProperty('image.width', 800)
+        width: 800
       })
-      .jpeg({quality: acklo.getConfigProperty('image.quality', 80)});
+      .jpeg({quality: 80});
   const clientFolderUploadPath = `${GENERATED_MEMES_FOLDER}/`
   const memeUrl = await memeClient.uploadAndGenerateUrl(compressedImageStream, clientFolderUploadPath, options.outfile)
   await sendResponseToSlack(options, { memeUrl, title, response_url })
@@ -208,10 +202,10 @@ function prepareOptions(text) {
   const options = {
     image: `${uuid()}.webp`,
     outfile: `./memefile-${uuid()}.webp`,
-    fontSize: acklo.getConfigProperty('image.font_size', 50),
-    fontFill: acklo.getConfigProperty('image.font_fill', '#FFF'),
-    strokeColor: acklo.getConfigProperty('image.stroke_color', '#000'),
-    strokeWeight: acklo.getConfigProperty('image.stroke_weight', 2)
+    fontSize: 50,
+    fontFill: '#FFF',
+    strokeColor: '#000',
+    strokeWeight: 2
   };
 
   const texts = autocorrect(text).split(' ')

@@ -13,7 +13,6 @@ const Jimp = require('jimp');
 const path = require('path');
 
 
-
 const app = express();
 
 // parse application/x-www-form-urlencoded
@@ -200,7 +199,7 @@ async function generateMemeUrl(SOURCE_FOLDER, options, GENERATED_MEMES_FOLDER) {
 
   image.write(options.outfile)
   const clientFolderUploadPath = `${GENERATED_MEMES_FOLDER}/`
-  return await memeClient.uploadAndGenerateUrl(compressedImageStream, clientFolderUploadPath, options.outfile)
+  return await memeClient.uploadAndGenerateUrl(fs.createReadStream(options.outfile), clientFolderUploadPath)
 }
 
 async function handleSay(request, reply) {
@@ -211,14 +210,8 @@ async function handleSay(request, reply) {
   // Reply with ok - we'll send the meme when we're done.
   reply.send();
 
-  const compressedImageStream = sharp(options.outfile)
-      .resize({
-        fit: sharp.fit.contain,
-        width: 800
-      })
-      .jpeg({quality: 80});
   const clientFolderUploadPath = `${GENERATED_MEMES_FOLDER}/`
-  const memeUrl = await memeClient.uploadAndGenerateUrl(compressedImageStream, clientFolderUploadPath, options.outfile)
+  const memeUrl = await memeClient.uploadAndGenerateUrl(compressedImageStream, clientFolderUploadPath)
   await sendResponseToSlack(options, { memeUrl, title, response_url })
 }
 

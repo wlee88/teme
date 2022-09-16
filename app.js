@@ -183,21 +183,24 @@ async function generateMemeUrl(SOURCE_FOLDER, options, GENERATED_MEMES_FOLDER) {
     },
    image.bitmap.width,
    image.bitmap.height
-  )
-
-  image.print(
-    font,
-    0,
-    BOTTOM_POS,
-    {
-      text: options.bottomText.toUpperCase(),
-      alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
-    },
-    image.bitmap.width,
-    image.bitmap.height
   );
 
-  image.write(options.outfile)
+  if (options.bottomText) {
+    image.print(
+      font,
+      0,
+      BOTTOM_POS,
+      {
+        text: options.bottomText.toUpperCase(),
+        alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+      },
+      image.bitmap.width,
+      image.bitmap.height
+    );
+  }
+
+
+  await image.write(options.outfile)
   const clientFolderUploadPath = `${GENERATED_MEMES_FOLDER}/`
   return await memeClient.uploadAndGenerateUrl(fs.createReadStream(options.outfile), clientFolderUploadPath)
 }

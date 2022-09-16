@@ -19,7 +19,7 @@ const client = (() => {
                 path: folderPath
             }
         }, (err, result, _) => {
-            if (err) {
+            if (err || !result) {
                 reject(err)
             }
             const { entries } = result

@@ -171,7 +171,7 @@ async function generateMemeUrl(SOURCE_FOLDER, options, GENERATED_MEMES_FOLDER) {
   }
 
   const TOP_POS = 5;
-  const BOTTOM_POS = image.bitmap.height - 45;
+  const BOTTOM_POS = image.bitmap.height - 90;
 
   image.print(
     font,

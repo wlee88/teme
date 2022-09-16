@@ -19,8 +19,11 @@ const client = (() => {
                 path: folderPath
             }
         }, (err, result, _) => {
-            if (err || !result) {
+            if (err) {
                 reject(err)
+            }
+            if (!result) {
+                reject('no entries found')
             }
             const { entries } = result
             const path = entries[randomNumber(entries.length)].path_lower

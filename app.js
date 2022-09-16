@@ -162,7 +162,8 @@ async function sendQuestionToSlack(params) {
 
 
 async function generateMemeUrl(SOURCE_FOLDER, options, GENERATED_MEMES_FOLDER) {
-  (await memeClient.getAndDownloadRandomFile(SOURCE_FOLDER, options.image))
+  await memeClient.getAndDownloadRandomFile(SOURCE_FOLDER, options.image)
+
   const font = await Jimp.loadFont("./fonts/impact.fnt");
   const image = await Jimp.read(options.image);
   if (image.bitmap.height < 100 || image.bitmap.width < 100) {
@@ -199,7 +200,7 @@ async function generateMemeUrl(SOURCE_FOLDER, options, GENERATED_MEMES_FOLDER) {
   }
 
 
-  await image.write(options.outfile)
+  await image.writeAsync(options.outfile)
   const clientFolderUploadPath = `${GENERATED_MEMES_FOLDER}/`
   return await memeClient.uploadAndGenerateUrl(fs.createReadStream(options.outfile), clientFolderUploadPath)
 }
@@ -219,12 +220,8 @@ async function handleSay(request, reply) {
 
 function prepareOptions(text) {
   const options = {
-    image: `${uuid()}.webp`,
-    outfile: `./memefile-${uuid()}.webp`,
-    fontSize: 50,
-    fontFill: '#FFF',
-    strokeColor: '#000',
-    strokeWeight: 2
+    image: `${uuid()}.jpg`,
+    outfile: `./memefile-${uuid()}.jpg`
   };
 
   const texts = autocorrect(text).split(' ')

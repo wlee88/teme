@@ -117,5 +117,13 @@ exports.helpText = () => ({
                 "text": "List available meme-able people using : `/meme-say list`"
             }
         }
+        ,
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "To add a team-member add a new photo in this [dropbox](https://www.dropbox.com/scl/fo/7wqhtk0os4c19iopirtrp/h?dl=0&rlkey=xxnireuv2xzb6ssgnmgxwqes4)"
+            }
+        }
     ]
 });

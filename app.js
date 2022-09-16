@@ -3,18 +3,14 @@ const { uuid } = require('uuidv4');
 require('dotenv').config()
 
 const fs = require('fs');
-const util = require('util')
-
 const bodyParser = require('body-parser');
 const axios = require('axios');
 const express = require('express');
-const sharp = require('sharp');
-const memeMaker = require('meme-maker');
 const { helpText, listPeople, response, question} = require("./slack-utils");
 const { autocorrect, extractParams, extractParamsForMemeSay } = require("./utils");
-const memeMakerPromise = util.promisify(memeMaker);
-
 const { memeClient } = require('./Dropbox');
+const JIMP = require('jimp');
+
 
 const app = express();
 
@@ -28,7 +24,7 @@ app.get('/', (_, reply) => {
   reply.sendStatus(200);
 });
 
-
+// TODO: authenticate slack request
 app.post('/', async (request, reply) => {
   console.log({request})
   console.log(request.body)
@@ -66,8 +62,7 @@ app.post('/', async (request, reply) => {
       } else if (actions.some(action => action.text.text === "Shuffle")) {
         const [SOURCE_FOLDER, GENERATED_MEMES_FOLDER, text, title, imageUrl] = actions[0].value.split('|')
 
-        // await memeClient.deleteFileBySharedLink(imageUrl)
-        const options = prepareOptions(text, false)
+        const options = prepareOptions(text)
         const memeUrl = await generateMemeUrl(SOURCE_FOLDER, options, GENERATED_MEMES_FOLDER);
         reply.send()
         console.log({memeUrl, options, text, title, imageUrl})
@@ -84,6 +79,7 @@ app.post('/', async (request, reply) => {
       reply.send(); // Reply with ok - we'll send the meme when we're done.
       const memeUrl = await generateMemeUrl(SOURCE_FOLDER, options, GENERATED_MEMES_FOLDER);
       cleanup(options)
+      
       await sendQuestionToSlack({ memeUrl, title, response_url, SOURCE_FOLDER, GENERATED_MEMES_FOLDER, text })
     }
   } else {
@@ -167,14 +163,40 @@ async function sendQuestionToSlack(params) {
 
 async function generateMemeUrl(SOURCE_FOLDER, options, GENERATED_MEMES_FOLDER) {
   (await memeClient.getAndDownloadRandomFile(SOURCE_FOLDER, options.image))
-  await memeMakerPromise(options);
+  const font = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK);
+  const image = await Jimp.read(options.image);
+  if (image.bitmap.height < 100 || image.bitmap.width < 100) {
+    image.scale(10);
+  }
 
-  const compressedImageStream = sharp(options.outfile)
-      .resize({
-        fit: sharp.fit.contain,
-        width: 800
-      })
-      .jpeg({quality: 80});
+  const TOP_POS = 5;
+  const BOTTOM_POS = image.bitmap.height - 45;
+
+  image.print(
+    font,
+    0,
+    TOP_POS,
+    {
+      text: options.topText.toUpperCase(),
+      alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+    },
+   image.bitmap.width,
+   image.bitmap.height
+  )
+
+  image.print(
+    font,
+    0,
+    BOTTOM_POS,
+    {
+      text: options.bottomText.toUpperCase(),
+      alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+    },
+    image.bitmap.width,
+    image.bitmap.height
+  );
+
+  image.write(options.outfile)
   const clientFolderUploadPath = `${GENERATED_MEMES_FOLDER}/`
   return await memeClient.uploadAndGenerateUrl(compressedImageStream, clientFolderUploadPath, options.outfile)
 }

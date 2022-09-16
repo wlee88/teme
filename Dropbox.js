@@ -23,7 +23,7 @@ const client = (() => {
                 reject(err)
             }
             if (!result) {
-                reject('no entries found')
+                reject('no entries')
             }
             const { entries } = result
             const path = entries[randomNumber(entries.length)].path_lower

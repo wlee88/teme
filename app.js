@@ -6,10 +6,12 @@ const fs = require('fs');
 const bodyParser = require('body-parser');
 const axios = require('axios');
 const express = require('express');
-const { helpText, listPeople, response, question} = require("./slack-utils");
-const { autocorrect, extractParams, extractParamsForMemeSay } = require("./utils");
+const { helpText, listPeople, response, question} = require('./slack-utils');
+const { autocorrect, extractParams, extractParamsForMemeSay } = require('./utils');
 const { memeClient } = require('./Dropbox');
-const JIMP = require('jimp');
+const Jimp = require('jimp');
+const path = require('path');
+
 
 
 const app = express();
@@ -163,7 +165,7 @@ async function sendQuestionToSlack(params) {
 
 async function generateMemeUrl(SOURCE_FOLDER, options, GENERATED_MEMES_FOLDER) {
   (await memeClient.getAndDownloadRandomFile(SOURCE_FOLDER, options.image))
-  const font = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK);
+  const font = await Jimp.loadFont(path.join(__dirname, "/fonts/impact.fnt"));
   const image = await Jimp.read(options.image);
   if (image.bitmap.height < 100 || image.bitmap.width < 100) {
     image.scale(10);

@@ -79,14 +79,6 @@ It will then print your meme text and return it to slack.
 - run `yarn` or `npm install`
 - run the app with `yarn start` or  `npm run start`
 - Can test with:
-bot mode
-```
-curl --header "Content-Type: application/x-www-form-urlencoded" \
---request POST \
---data 'text=22222dasdgsadgaserpnot have;TP??&command=/ana-say' \
-http://localhost:3000
-```
-meme-say mode
 ```
 curl --header "Content-Type: application/x-www-form-urlencoded" \
 --request POST \

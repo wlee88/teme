@@ -1,9 +1,12 @@
-const { capitalCase } = require('change-case');
-const { uuid } = require('uuidv4');
+import { uuid } from 'uuidv4';
+import { Options } from './app';
 
-exports.autocorrect = (text) =>
-  text ? text.replace('romania', 'Romania') : '';
-exports.extractParamsForMemeSay = (request) => {
+const { capitalCase } = require('change-case');
+
+interface SlackRequest {
+  body: { text: string; response_url: string; command: string };
+}
+export const extractParamsForMemeSay = (request: SlackRequest) => {
   const {
     body: { text, response_url },
   } = request;
@@ -12,7 +15,7 @@ exports.extractParamsForMemeSay = (request) => {
   const GENERATED_MEMES_FOLDER = `/meme-say/generated-memes/${MEME_FOLDER}`;
   const SOURCE_FOLDER = `/meme-say/source/${MEME_FOLDER}`;
 
-  const texts = this.autocorrect(text).split(' ');
+  const texts = text.split(' ');
   texts.shift();
 
   const jointTextsAndSplitWithDelimiter = texts.join(' ').split(';');
@@ -30,12 +33,12 @@ exports.extractParamsForMemeSay = (request) => {
   };
 };
 
-exports.extractParams = (request) => {
+export const extractParams = (request: SlackRequest) => {
   const {
     body: { text, response_url, command },
   } = request;
 
-  const texts = this.autocorrect(text).trim().split(';');
+  const texts = text.trim().split(';');
 
   const COMMAND = command.replace('/', '').replace('-say', '');
   const APP_NAME = capitalCase(COMMAND);
@@ -45,7 +48,7 @@ exports.extractParams = (request) => {
 
   const title = `${APP_NAME}: ${text.trim().replace(';', ' ')}`;
 
-  const options = {
+  const options: Partial<Options> = {
     image: `${uuid()}.webp`,
     outfile: `./memefile-${uuid()}.webp`,
   };
@@ -66,4 +69,5 @@ exports.extractParams = (request) => {
   };
 };
 // random number from 0 - max exclusive - i.e won't return the max as a random number
-exports.randomNumber = (limit) => Math.floor(Math.random() * Math.floor(limit));
+export const randomNumber = (limit: number) =>
+  Math.floor(Math.random() * Math.floor(limit));

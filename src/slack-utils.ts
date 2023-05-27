@@ -1,17 +1,21 @@
-exports.question = (
-  title,
-  image_url,
-  SOURCE_FOLDER,
-  GENERATED_MEMES_FOLDER,
-  text
+export interface SlackTextBlock {
+  blocks: {
+    type: string;
+    text: {
+      type: string;
+      text: string;
+    };
+  }[];
+}
+
+export const question = (
+  title: string,
+  imageUrl: string,
+  sourceFolder: string,
+  generatedMemesFolder: string,
+  text: string
 ) => {
-  const values = [
-    SOURCE_FOLDER,
-    GENERATED_MEMES_FOLDER,
-    text,
-    title,
-    image_url,
-  ];
+  const values = [sourceFolder, generatedMemesFolder, text, title, imageUrl];
   const value = values.join('|');
   return {
     blocks: [
@@ -27,7 +31,7 @@ exports.question = (
       },
       {
         type: 'image',
-        image_url,
+        image_url: imageUrl,
         alt_text: title,
       },
       {
@@ -68,7 +72,7 @@ exports.question = (
   };
 };
 
-exports.listPeople = (people) => {
+export const listPeople = (people: string[]): SlackTextBlock => {
   const header = {
     type: 'header',
     text: {
@@ -92,7 +96,7 @@ exports.listPeople = (people) => {
   };
   return response;
 };
-exports.response = (title, image_url) => ({
+export const response = (title: string, imageUrl: string) => ({
   blocks: [
     {
       type: 'image',
@@ -100,14 +104,14 @@ exports.response = (title, image_url) => ({
         type: 'plain_text',
         text: title,
       },
-      image_url,
+      image_url: imageUrl,
       alt_text: title,
       block_id: 'derp',
     },
   ],
 });
 
-exports.helpText = () => ({
+export const helpText = () => ({
   blocks: [
     {
       type: 'section',

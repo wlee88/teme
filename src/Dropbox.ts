@@ -1,9 +1,21 @@
-const { randomNumber } = require('./utils');
-const { uuid } = require('uuidv4');
-const fs = require('fs');
+import { uuid } from 'uuidv4';
 
+import { randomNumber } from './utils';
+import * as fs from 'fs';
 const dropboxV2Api = require('dropbox-v2-api');
+
 const { DROPBOX_API_KEY } = process.env;
+
+// TODO: interface this and move to client folder
+
+type DropboxCallback = (
+  err: Error,
+  result: {
+    id: string;
+    entries: [{ path_lower: string; name: string }];
+    url: string;
+  }
+) => void;
 
 const client = (() => {
   const dropbox = dropboxV2Api.authenticate({
@@ -11,9 +23,20 @@ const client = (() => {
   });
 
   console.log({ DROPBOX_API_KEY });
-  const getRandomFile = (folderPath) =>
+  const getRandomFile = (folderPath: string): Promise<string> =>
     new Promise((resolve, reject) => {
       console.log({ folderPath });
+      const callback: DropboxCallback = (err, result) => {
+        if (err) {
+          reject(err);
+        }
+        if (!result) {
+          reject('no entries');
+        }
+        const { entries } = result;
+        const path = entries[randomNumber(entries.length)].path_lower;
+        resolve(path);
+      };
       dropbox(
         {
           resource: 'files/list_folder',
@@ -21,23 +44,19 @@ const client = (() => {
             path: folderPath,
           },
         },
-        (err, result, _) => {
-          if (err) {
-            reject(err);
-          }
-          if (!result) {
-            reject('no entries');
-          }
-          const { entries } = result;
-          const path = entries[randomNumber(entries.length)].path_lower;
-          resolve(path);
-        }
+        callback
       );
     });
 
-  const downloadFile = (path, destination) =>
+  const downloadFile = (path: string, destination: string) =>
     new Promise((resolve, reject) => {
       console.log('download file', { path, destination });
+      const callback: DropboxCallback = (err, result) => {
+        if (err) {
+          reject(err);
+        }
+        resolve(result);
+      };
       dropbox(
         {
           resource: 'files/download',
@@ -45,69 +64,74 @@ const client = (() => {
             path,
           },
         },
-        (err, result, _) => {
-          if (err) {
-            reject(err);
-          }
-          resolve(result);
-        }
+        callback
       ).pipe(fs.createWriteStream(destination));
     });
 
-  const upload = (fileStream, path) =>
+  const upload = (fileStream: string, path: string) =>
     new Promise((resolve, reject) => {
       console.log('upload', { path });
+      const callback: DropboxCallback = (err, result) => {
+        err ? reject(err) : resolve(result);
+      };
       dropbox(
         {
           resource: 'files/upload',
           parameters: { path },
           readStream: fileStream,
         },
-        (err, result, _) => {
-          err ? reject(err) : resolve(result);
-        }
+        callback
       );
     });
 
-  const getShareableUrl = (path) =>
+  const getShareableUrl = (path: string) =>
     new Promise((resolve, reject) => {
       console.log('getShareableUrl', { path });
+      const callback: DropboxCallback = (err, result) => {
+        if (err) reject(err);
+        const { url } = result;
+        // We need to do this because the url returned is not the downloadable url
+        const downloadableUrl = url.replace(
+          'www.dropbox.com',
+          'dl.dropboxusercontent.com'
+        );
+        resolve(downloadableUrl);
+      };
       dropbox(
         {
           resource: 'sharing/create_shared_link_with_settings',
           parameters: { path },
         },
-        (err, result, _) => {
-          if (err) reject(err);
-          const { url } = result;
-          // Replace www.dropbox.com with dl.dropboxusercontent.com
-          const downloadableUrl = url.replace(
-            'www.dropbox.com',
-            'dl.dropboxusercontent.com'
-          );
-          resolve(downloadableUrl);
-        }
+        callback
       );
     });
 
-  const deleteFile = (id) =>
-    new Promise((resolve, reject) => {
+  const deleteFile = (id: string) =>
+    new Promise<void>((resolve, reject) => {
       console.log('deleteFile', { id });
+      const callback: DropboxCallback = (err, result) => {
+        if (err) reject(err);
+        resolve();
+      };
       dropbox(
         {
           resource: 'file_requests/delete',
           parameters: { ids: [id] },
         },
-        (err, result, _) => {
-          if (err) reject(err);
-          resolve();
-        }
+        callback
       );
     });
 
-  const getFolderContents = (path) =>
+  const getFolderContents = (path: string) =>
     new Promise((resolve, reject) => {
       console.log('path', { path });
+      const callback: DropboxCallback = (err, result) => {
+        console.log('list_folder', { result });
+        if (err) reject(err);
+        const { entries } = result;
+        const folders = entries.map((entry) => entry.name);
+        resolve(folders);
+      };
       dropbox(
         {
           resource: 'files/list_folder',
@@ -118,41 +142,37 @@ const client = (() => {
             include_deleted: false,
           },
         },
-        (err, result, _) => {
-          console.log('list_folder', { result });
-          if (err) reject(err);
-          const { entries } = result;
-          const folders = entries.map((entry) => entry.name);
-          resolve(folders);
-        }
+        callback
       );
     });
 
-  const getIdFromSharedUrl = (url) =>
+  const getIdFromSharedUrl = (url: string): Promise<string> =>
     new Promise((resolve, reject) => {
       const downloadableUrl = url.replace(
         'dl.dropboxusercontent.com',
         'www.dropbox.com'
       );
 
+      const callback: DropboxCallback = (err, result) => {
+        if (err) reject(err);
+        console.log({ result });
+        const { id } = result;
+        const response = id.replace('id:', '');
+        resolve(response);
+      };
+
       dropbox(
         {
           resource: 'sharing/get_shared_link_metadata',
           parameters: { url: downloadableUrl },
         },
-        (err, result, _) => {
-          if (err) reject(err);
-          console.log({ result });
-          const { id } = result;
-          const response = id.replace('id:', '');
-          resolve(response);
-        }
+        callback
       );
     });
 
   return {
-    getFolderContents: async (path) => getFolderContents(path),
-    deleteFileBySharedLink: async (url) => {
+    getFolderContents: async (path: string) => getFolderContents(path),
+    deleteFileBySharedLink: async (url: string) => {
       console.log('deleteFile', { url });
       try {
         const dropboxPath = await getIdFromSharedUrl(url);
@@ -161,7 +181,10 @@ const client = (() => {
         console.log({ error });
       }
     },
-    getAndDownloadRandomFile: async (folderPath, destination) => {
+    getAndDownloadRandomFile: async (
+      folderPath: string,
+      destination: string
+    ) => {
       console.log('getAndDownloadRandomFile', { folderPath });
       try {
         const path = await getRandomFile(folderPath);
@@ -171,7 +194,7 @@ const client = (() => {
         console.log({ error });
       }
     },
-    uploadAndGenerateUrl: async (stream, clientFolderPath) => {
+    uploadAndGenerateUrl: async (stream: string, clientFolderPath: string) => {
       console.log('uploadAndGenerateUrl', { clientFolderPath });
       try {
         const randomFileName = `${uuid()}.jpg`;

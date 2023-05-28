@@ -2,7 +2,9 @@
 
 ## What is Teme?
 - A slack bot which can create memes based on a folder of images that you specify.
+
 <img width="442" alt="Screenshot 2023-05-28 at 10 28 29 pm" src="https://github.com/wlee88/teme/assets/631540/2c9e94e4-802e-4572-8a39-5a86c85829ea">
+
 - An amalgamation of "meme" and "team".
 - When inspiration strikes on slack and you want to create a quick meme based on a slack team member, `teme` is a deployable slackbot which can make this request for you.
 - Fun fact: this was initially called `meme-say`. I was inspired by [cow-say](https://github.com/sckott/cowsay) and thought it would be great to bring this to slack.

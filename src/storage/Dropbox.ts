@@ -57,7 +57,7 @@ export class DropboxStorageClient implements StorageClient {
       const randomFileName = `${uuid()}.jpg`;
       const dropboxFilePath = `${clientFolderPath}${randomFileName}`;
       await this.upload(stream, dropboxFilePath);
-      return this.getShareableUrl(dropboxFilePath);
+      return await this.getShareableUrl(dropboxFilePath);
     } catch (error) {
       throw Error('Could not upload and generate URL');
     }
@@ -166,16 +166,6 @@ export class DropboxStorageClient implements StorageClient {
 
   private getShareableUrl(path: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      const callback: DropboxCallback = (err, result) => {
-        if (err) reject(err);
-        const { url } = result;
-        // We need to do this because the url returned is not the downloadable url
-        const downloadableUrl = url.replace(
-          'www.dropbox.com',
-          'dl.dropboxusercontent.com'
-        );
-        resolve(downloadableUrl);
-      };
       this.dropbox(
         {
           resource: 'sharing/create_shared_link_with_settings',
@@ -186,7 +176,16 @@ export class DropboxStorageClient implements StorageClient {
             },
           },
         },
-        callback
+        (err: Error, result: any, response: any) => {
+          if (err) reject(err);
+          const { url } = result;
+          // We need to do this because the url returned is not the downloadable url
+          const downloadableUrl = url.replace(
+            'www.dropbox.com',
+            'dl.dropboxusercontent.com'
+          );
+          resolve(downloadableUrl);
+        }
       );
     });
   }

@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import bodyparser from 'body-parser';
-import express from 'express';
+import express, { Response } from 'express';
 import * as Jimp from 'jimp';
 import Axios from 'axios';
 import { uuid } from 'uuidv4';
@@ -14,8 +14,8 @@ import {
 import { extractParamsForMemeSay } from './utils';
 import { DropboxStorageClient } from './storage/Dropbox';
 
-const IMPACT_FONT_PATH = './fonts/impact.fnt';
-const PORT = process.env.PORT || 3000;
+const IMPACT_FONT_PATH = __dirname + '/fonts/impact.fnt';
+const PORT = 3000;
 
 interface ResponseParams {
   memeUrl: string;
@@ -23,7 +23,7 @@ interface ResponseParams {
   response_url: string;
 }
 
-export interface Options {
+export interface ImageOptions {
   topText: string;
   bottomText: string;
   image: string;
@@ -31,6 +31,11 @@ export interface Options {
 }
 
 const app = express();
+
+app.listen(PORT, async function () {
+  console.log(`Example app listening on port ${PORT}!`);
+});
+
 app.use(bodyparser.urlencoded({ extended: false }));
 app.use(bodyparser.json());
 
@@ -38,94 +43,53 @@ app.use(bodyparser.json());
 const memeClient = new DropboxStorageClient();
 
 // TODO: authenticate slack request
+// TODO: proper logging
 app.post('/', async (request, reply) => {
-  console.log({ request });
-  console.log(request.body);
-  const {
-    body: { command },
-  } = request;
-
-  // TODO: look into what is actually sent
-  if (!command || command.includes('meme-say')) {
-    console.log('command is meme-say');
+  console.log({ requestBody: request.body });
+  try {
     const { response_url, GENERATED_MEMES_FOLDER, SOURCE_FOLDER, title, text } =
       extractParamsForMemeSay(request);
 
-    if (text?.startsWith('list')) {
-      reply.send();
-      const folder = SOURCE_FOLDER.replace('/list', '');
-      const folders = await memeClient.getFolderContents(folder);
-      await sendResponseToSlackWithAttachments({ response_url }, [
-        listPeople(folders),
-      ]);
-      return;
+    if (text.startsWith('list')) {
+      await handleList(reply, SOURCE_FOLDER, response_url);
     }
 
-    if (text?.startsWith('help')) {
-      reply.send();
-      await sendResponseToSlackWithAttachments({ response_url }, [helpText()]);
-      return;
+    if (text.startsWith('help')) {
+      await handleHelp(reply, response_url);
     }
 
     const options = buildOptions(text);
-    const payload: {
-      actions: { text: { text: string }; value: string }[];
-      response_url: string;
-    } = request.body.payload ? JSON.parse(request.body.payload) : undefined;
-    if (payload?.actions?.length) {
-      console.log('payload... ', payload);
+    const isReply = !!request.body?.payload;
+    // is a reply
+    if (isReply) {
+      const payload: {
+        actions: { text: { text: string }; value: string }[];
+        response_url: string;
+      } = JSON.parse(request.body.payload);
       const { actions, response_url } = payload;
-      if (actions.some((action) => action.text.text === 'Cancel')) {
-        const [_, __, ___, ____, imageUrl] = actions[0].value.split('|');
-        console.log('cancel clicked');
-        await deleteOriginal({ response_url });
-        await memeClient.deleteFileBySharedLink(imageUrl);
-      } else if (actions.some((action) => action.text.text === 'Shuffle')) {
-        const [SOURCE_FOLDER, GENERATED_MEMES_FOLDER, text, title, imageUrl] =
-          actions[0].value.split('|');
 
-        const options = buildOptions(text);
-        const memeUrl = await generateMemeUrl(
-          SOURCE_FOLDER,
-          options,
-          GENERATED_MEMES_FOLDER
-        );
-        reply.send();
-        console.log({ memeUrl, options, text, title, imageUrl });
-        cleanup(options);
-        await sendQuestionToSlack({
-          memeUrl,
-          title,
-          response_url,
-          sourceFolder: SOURCE_FOLDER,
-          generatedMemesFolder: GENERATED_MEMES_FOLDER,
-          text,
-        });
+      if (actions.some((action) => action.text.text === 'Cancel')) {
+        await handleCancel(actions, response_url);
+      }
+      if (actions.some((action) => action.text.text === 'Shuffle')) {
+        await handleShuffle(actions, reply, response_url);
       } else {
-        // send was sent - so use the specified url
         console.log('ok clicked');
-        const [_, __, ___, title, memeUrl] = actions[0].value.split('|');
-        await sendResponseToSlack({ memeUrl, title, response_url });
-        reply.send(); // Reply with ok - we'll send the meme when we're done.
+        await handleConfirm(actions, reply, response_url);
       }
     } else {
-      reply.send(); // Reply with ok - we'll send the meme when we're done.
-      const memeUrl = await generateMemeUrl(
-        SOURCE_FOLDER,
-        options,
-        GENERATED_MEMES_FOLDER
-      );
-      cleanup(options);
-
-      await sendQuestionToSlack({
-        memeUrl,
-        title,
+      await handleFirstRequest(
+        reply,
         response_url,
-        sourceFolder: SOURCE_FOLDER,
-        generatedMemesFolder: GENERATED_MEMES_FOLDER,
+        SOURCE_FOLDER,
+        GENERATED_MEMES_FOLDER,
+        title,
         text,
-      });
+        options
+      );
     }
+  } catch (error) {
+    console.log({ error });
   }
 });
 
@@ -133,7 +97,6 @@ async function sendResponseToSlack(params: ResponseParams) {
   const { memeUrl, title, response_url } = params;
   try {
     const res = response(title, memeUrl);
-    console.log({ response: JSON.stringify(res) });
 
     await Axios.post(response_url, {
       response_type: 'in_channel',
@@ -163,7 +126,7 @@ async function sendResponseToSlackWithAttachments(
   }
 }
 
-function cleanup(options: Options) {
+function cleanup(options: ImageOptions) {
   fs.unlinkSync(options.image);
   fs.unlinkSync(options.outfile);
 }
@@ -216,7 +179,7 @@ async function sendQuestionToSlack(params: {
 
 async function generateMemeUrl(
   sourceFolder: string,
-  options: Options,
+  options: ImageOptions,
   memesFolder: string
 ): Promise<string> {
   await memeClient.getAndDownloadRandomFile(sourceFolder, options.image);
@@ -264,15 +227,123 @@ async function generateMemeUrl(
   );
 }
 
-function buildOptions(text: string): Options {
-  const texts = text.split(' ');
+function buildOptions(text: string): ImageOptions {
+  // todo: this code is duplicated - centralise it
 
-  const options: Options = {
+  const options: ImageOptions = {
     image: `${uuid()}.jpg`,
     outfile: `./memefile-${uuid()}.jpg`,
-    topText: texts.join(' ').split(';')[0],
-    bottomText: texts.join(' ').split(';')[1],
+    topText: text.split(';')[0],
+    bottomText: text.split(';')[1],
   };
 
   return options;
+}
+
+async function handleList(
+  reply: Response,
+  SOURCE_FOLDER: string,
+  response_url: string
+) {
+  reply.send();
+  const folder = SOURCE_FOLDER.replace('/list', '');
+  const folders = await memeClient.getFolderContents(folder);
+  await sendResponseToSlackWithAttachments({ response_url }, [
+    listPeople(folders),
+  ]);
+  return;
+}
+
+async function handleHelp(reply: Response, response_url: string) {
+  reply.send();
+  await sendResponseToSlackWithAttachments({ response_url }, [helpText()]);
+  return;
+}
+
+async function generateMeme(
+  SOURCE_FOLDER: string,
+  options: ImageOptions,
+  GENERATED_MEMES_FOLDER: string
+) {
+  const memeUrl = await generateMemeUrl(
+    SOURCE_FOLDER,
+    options,
+    GENERATED_MEMES_FOLDER
+  );
+  cleanup(options);
+  return memeUrl;
+}
+
+async function handleFirstRequest(
+  reply: Response,
+  response_url: string,
+  sourceFolder: string,
+  generatedMemesFolder: string,
+  title: string,
+  text: string,
+  options: ImageOptions
+) {
+  reply.send(); // Reply with ok - we'll send the meme when we're done.
+  const memeUrl = await generateMeme(
+    sourceFolder,
+    options,
+    generatedMemesFolder
+  );
+
+  await sendQuestionToSlack({
+    memeUrl,
+    title,
+    response_url,
+    sourceFolder,
+    generatedMemesFolder,
+    text,
+  });
+}
+
+async function handleCancel(
+  actions: { text: { text: string }; value: string }[],
+  response_url: string
+) {
+  const [_, __, ___, ____, imageUrl] = actions[0].value.split('|');
+  console.log('cancel clicked');
+  await deleteOriginal({ response_url });
+  await memeClient.deleteFileBySharedLink(imageUrl);
+}
+
+async function handleShuffle(
+  actions: { text: { text: string }; value: string }[],
+  reply: Response,
+  response_url: string
+) {
+  const [SOURCE_FOLDER, GENERATED_MEMES_FOLDER, text, title] =
+    actions[0].value.split('|');
+
+  const options = buildOptions(text);
+  const memeUrl = await generateMemeUrl(
+    SOURCE_FOLDER,
+    options,
+    GENERATED_MEMES_FOLDER
+  );
+  reply.send();
+  cleanup(options);
+
+  await sendQuestionToSlack({
+    memeUrl,
+    title,
+    response_url,
+    sourceFolder: SOURCE_FOLDER,
+    generatedMemesFolder: GENERATED_MEMES_FOLDER,
+    text,
+  });
+  return { SOURCE_FOLDER, GENERATED_MEMES_FOLDER, text, title, memeUrl };
+}
+
+async function handleConfirm(
+  actions: { text: { text: string }; value: string }[],
+  reply: Response,
+  response_url: string
+) {
+  reply.send(); // Reply with ok - we'll send the meme when we're done.
+  const [_, __, ___, title, memeUrl] = actions[0].value.split('|');
+  await sendResponseToSlack({ memeUrl, title, response_url });
 }

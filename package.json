@@ -5,8 +5,10 @@
   "main": "app.js",
   "scripts": {
     "prettier": "prettier --write *.json src/**/*.ts",
-    "build": "rm -rf dist/ && tsc",
-    "start": "node dist/app.js"
+    "build": "rm -rf dist/ && tsc && yarn copy-fonts",
+    "start": "node dist/app.js",
+    "deploy": "yarn build && fly deploy",
+    "copy-fonts": "cp -r src/fonts dist/fonts"
   },
   "author": "",
   "dependencies": {

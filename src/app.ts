@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import bodyparser from 'body-parser';
 import express from 'express';
-import Jimp from 'jimp/*';
+import * as Jimp from 'jimp';
 import Axios from 'axios';
 import { uuid } from 'uuidv4';
 import {
@@ -12,10 +12,10 @@ import {
   SlackTextBlock,
 } from './slack-utils';
 import { extractParamsForMemeSay } from './utils';
-
-const { memeClient } = require('./Dropbox');
+import { DropboxStorageClient } from './storage/Dropbox';
 
 const IMPACT_FONT_PATH = './fonts/impact.fnt';
+const PORT = process.env.PORT || 3000;
 
 interface ResponseParams {
   memeUrl: string;
@@ -29,10 +29,13 @@ export interface Options {
   image: string;
   outfile: string;
 }
-const app = express();
 
+const app = express();
 app.use(bodyparser.urlencoded({ extended: false }));
 app.use(bodyparser.json());
+
+// init clients
+const memeClient = new DropboxStorageClient();
 
 // TODO: authenticate slack request
 app.post('/', async (request, reply) => {
@@ -126,8 +129,6 @@ app.post('/', async (request, reply) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-
 async function sendResponseToSlack(params: ResponseParams) {
   const { memeUrl, title, response_url } = params;
   try {
@@ -167,7 +168,7 @@ function cleanup(options: Options) {
   fs.unlinkSync(options.outfile);
 }
 
-async function deleteOriginal(params: { response_url: string }) {
+async function deleteOriginal(params: { response_url: string }): Promise<void> {
   const { response_url } = params;
   try {
     await Axios.post(response_url, {
@@ -185,7 +186,7 @@ async function sendQuestionToSlack(params: {
   sourceFolder: string;
   generatedMemesFolder: string;
   text: string;
-}) {
+}): Promise<void> {
   const {
     memeUrl,
     title,
@@ -209,7 +210,7 @@ async function sendQuestionToSlack(params: {
       attachments: [response],
     });
   } catch (error) {
-    console.log({ error });
+    throw error;
   }
 }
 
@@ -217,11 +218,11 @@ async function generateMemeUrl(
   sourceFolder: string,
   options: Options,
   memesFolder: string
-) {
+): Promise<string> {
   await memeClient.getAndDownloadRandomFile(sourceFolder, options.image);
 
   const font = await Jimp.loadFont(IMPACT_FONT_PATH);
-  const image = await Jimp.read(options.image);
+  const image = (await Jimp.read(options.image)) as Jimp;
   if (image.bitmap.height < 100 || image.bitmap.width < 100) {
     image.scale(10);
   }
@@ -257,7 +258,7 @@ async function generateMemeUrl(
 
   await image.writeAsync(options.outfile);
   const clientFolderUploadPath = `${memesFolder}/`;
-  return await memeClient.uploadAndGenerateUrl(
+  return await memeClient.uploadAndGetPublicUrl(
     fs.createReadStream(options.outfile),
     clientFolderUploadPath
   );

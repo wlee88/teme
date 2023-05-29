@@ -1,24 +1,19 @@
 # Teme custom slack bot
 
 ## What is Teme?
-- A slack bot which can create memes based on a folder of images that you specify.
+- Given a slack slash `/teme [folderName] [top-text;bottom-text]` does the following
+  - retrieves a random image from the specified `folderName`
+  - appends text to the image in a meme format with the specified `[top-text;bottom-text]`
+  - The interface looks like this - where you're given a preview of the image and can shuffle until it finds a random photo in the folder  that you're happy with - where the folder exists in the storage provider of choice (currently only dropbox is supported).
 
 <img width="442" alt="Screenshot 2023-05-28 at 10 28 29 pm" src="https://github.com/wlee88/teme/assets/631540/2c9e94e4-802e-4572-8a39-5a86c85829ea">
 
 - An amalgamation of "meme" and "team".
-- When inspiration strikes on slack and you want to create a quick meme based on a slack team member, `teme` is a deployable slackbot which can make this request for you.
 - Fun fact: this was initially called `meme-say`. I was inspired by [cow-say](https://github.com/sckott/cowsay) and thought it would be great to bring this to slack.
 
-## How does it work?
+## How does it work in a team context?
 
-Slash command - type the name of a team member and the text like so `/teme alex hi;there`.
-This will
-- Find a folder called `alex` (using a storage provider of choice - currently only dropbox is supported.)
-- Choose a random image
-- Apply the text (top and bottom text seperated with `;`)
-- Ask the user with an ephemeral message(i.e only visible to them), if the preview is adequate, with the choice of shuffling to a new random image and trying again.
-- If the user chooses the image - it is sent to the channel.
-- Let the fun begin.
+Folder names are usually the name of a slack team member. For example if you wanted to meme your team member called Alex - there would be a folder  called alex, with a collection of `alex` images. You can channel meme alex with imagery with `/teme alex i heard;e2e`.
 
 ### Setup
 #### Folder Setup

@@ -13,7 +13,7 @@
 
 ## How does it work in a team context?
 
-Folder names are usually the name of a slack team member. For example if you wanted to meme your team member called Alex - there would be a folder  called alex, with a collection of `alex` images. You can channel meme alex with imagery with `/teme alex i heard;e2e`.
+Folder names are usually the name of a slack team member. For example if you wanted to meme your team member called Alex - there would be a folder  called alex, with a collection of `alex` images. You can channel meme alex with imagery with `/teme alex i heart;e2e`.
 
 ### Setup
 #### Folder Setup
